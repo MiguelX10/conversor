@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ConvertPro - Conversor Universal de Archivos | PDF, Video, Audio, Imágenes y Más</title>
+    <meta name="description" content="Convierte más de 60 tipos de archivos gratis: PDF a Word, Video a MP3, Imágenes, eBooks, Documentos y más. Rápido, seguro y sin límites.">
+    <meta name="keywords" content="convertir PDF, PDF a Word, video a MP3, convertir archivos, conversor online, HEIC a JPG, EPUB, audio, video">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="ConvertPro - Conversor Universal de Archivos">
+    <meta property="og:description" content="Convierte más de 60 tipos de archivos gratis: PDF, Video, Audio, Imágenes y más">
+    <meta property="og:image" content="/og-image.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="ConvertPro - Conversor Universal de Archivos">
+    <meta property="twitter:description" content="Convierte más de 60 tipos de archivos gratis">
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'GA_MEASUREMENT_ID', {
+        page_title: 'ConvertPro - Universal File Converter',
+        custom_map: {'custom_parameter_1': 'conversion_type'}
+      });
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#667eea',
+                            600: '#5a67d8',
+                            700: '#4c51bf'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
