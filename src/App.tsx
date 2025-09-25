@@ -78,6 +78,7 @@ interface ConversionTool {
   isSplitTool?: boolean
   splitSettings?: SplitSettings
   maxFileSize?: number // in MB
+  redirectUrl?: string // URL para redireccionar a conversor específico
 }
 
 interface MultiFileSettings {
@@ -119,7 +120,8 @@ const CONVERSION_TOOLS: ConversionTool[] = [
     outputFormat: 'docx',
     icon: FileText,
     acceptTypes: { 'application/pdf': ['.pdf'] },
-    category: 'from-pdf'
+    category: 'from-pdf',
+    redirectUrl: '/converter.html' // Redirige a tu conversor específico
   },
   {
     id: 'pdf-to-jpg',
@@ -129,7 +131,8 @@ const CONVERSION_TOOLS: ConversionTool[] = [
     outputFormat: 'jpg',
     icon: Image,
     acceptTypes: { 'application/pdf': ['.pdf'] },
-    category: 'from-pdf'
+    category: 'from-pdf',
+    redirectUrl: '/pdf-to-jpg' // Ejemplo: página específica para PDF a JPG
   },
   {
     id: 'pdf-to-excel',
@@ -1437,6 +1440,17 @@ function App() {
     if (tool.isOptimization && tool.optimizationSettings?.defaultQuality) {
       setOptimizationQuality(tool.optimizationSettings.defaultQuality)
     }
+
+    // Scroll automático hacia la sección de conversión
+    setTimeout(() => {
+      const conversionSection = document.getElementById('conversion-section')
+      if (conversionSection) {
+        conversionSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      }
+    }, 100) // Pequeño delay para asegurar que el estado se actualice primero
   }
 
   const getFilteredTools = (category: string) => {
@@ -2251,15 +2265,19 @@ function App() {
                         >
                           <IconComponent className="h-5 w-5 mr-2" style={{ color: colors.icon }} />
                         </motion.div>
-                        <motion.span
-                          className="font-medium"
-                          style={{ color: 'var(--text-primary)' }}
+                        <motion.div
+                          className="flex items-center space-x-2"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           transition={{ duration: 0.3, delay: 0.4 }}
                         >
-                          {tool.name}
-                        </motion.span>
+                          <span
+                            className="font-medium"
+                            style={{ color: 'var(--text-primary)' }}
+                          >
+                            {tool.name}
+                          </span>
+                        </motion.div>
                       </motion.div>
                     ) : (
                       <motion.div
@@ -2386,15 +2404,19 @@ function App() {
                           ) : (
                             <IconComponent className="h-5 w-5 mr-2" style={{ color: colors.icon }} />
                           )}
-                          <motion.span
-                            className="font-medium"
-                            style={{ color: 'var(--text-primary)' }}
+                          <motion.div
+                            className="flex items-center space-x-2"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.3, delay: 0.5 }}
                           >
-                            {tool.name}
-                          </motion.span>
+                            <span
+                              className="font-medium"
+                              style={{ color: 'var(--text-primary)' }}
+                            >
+                              {tool.name}
+                            </span>
+                          </motion.div>
                         </motion.div>
 
                         {/* Arrow Animation */}
@@ -2560,7 +2582,7 @@ function App() {
         </div>
 
         {/* Main Converter */}
-        <div className="rounded-2xl border overflow-hidden mb-12 transition-all duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', boxShadow: 'var(--shadow-xl)' }}>
+        <div id="conversion-section" className="rounded-2xl border overflow-hidden mb-12 transition-all duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', boxShadow: 'var(--shadow-xl)' }}>
           <div className="p-8">
 
             {/* File Upload */}
