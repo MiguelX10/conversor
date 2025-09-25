@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { FileText, Upload, Download, Loader2, AlertCircle, CheckCircle, Image, FileSpreadsheet, Presentation, Globe, Grid, Minimize2, Video, Settings, Combine, SplitSquareHorizontal, Music, Film, Archive, FileImage, FileType, Palette, FileAudio, Headphones, Volume2, Camera, Zap, Code, BookOpen, FileCode, Layers, Lock, Unlock, Database, HardDrive, Smartphone } from 'lucide-react'
+import { FileText, Upload, Download, Loader2, AlertCircle, CheckCircle, Image, FileSpreadsheet, Presentation, Globe, Grid, Minimize2, Video, Settings, Combine, SplitSquareHorizontal, Music, Film, Archive, FileImage, FileType, Palette, FileAudio, Headphones, Volume2, Camera, Zap, Code, BookOpen, FileCode, Layers, Lock, Unlock, Database, HardDrive, Smartphone, Menu, ChevronDown, Search, Filter, History, Eye, Trash2, Star, FolderOpen, Cloud, Share, X, Plus, Minus, RotateCcw, Maximize2, Play, Pause } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { saveAs } from 'file-saver'
 import DarkModeToggle from './components/DarkModeToggle'
@@ -13,6 +13,51 @@ interface ConversionState {
   progress: number
   message: string
   error?: string
+}
+
+interface BatchConversionState {
+  files: FileWithProgress[]
+  overallProgress: number
+  completed: number
+  failed: number
+  status: 'idle' | 'processing' | 'completed' | 'error'
+}
+
+interface FileWithProgress {
+  file: File
+  id: string
+  progress: number
+  status: 'pending' | 'processing' | 'completed' | 'error'
+  error?: string
+  downloadUrl?: string
+}
+
+interface ConversionHistory {
+  id: string
+  fileName: string
+  inputFormat: string
+  outputFormat: string
+  tool: string
+  date: Date
+  fileSize: number
+  downloadUrl?: string
+  isFavorite: boolean
+}
+
+interface UserSettings {
+  defaultQuality: number
+  preferredFormats: { [key: string]: string }
+  favoriteTools: string[]
+  theme: 'light' | 'dark' | 'auto'
+  showPreview: boolean
+  batchSize: number
+  autoDownload: boolean
+}
+
+interface FilePreview {
+  url: string
+  type: 'image' | 'pdf' | 'text' | 'video' | 'audio'
+  thumbnailUrl?: string
 }
 
 interface ConversionTool {
@@ -749,6 +794,39 @@ function App() {
   // Estado para navegación por secciones
   const [activeSection, setActiveSection] = useState<'from-pdf' | 'to-pdf' | 'optimize' | 'image-convert' | 'pdf-tools' | 'media-convert' | 'document-convert' | 'ebook-convert' | 'archive-convert' | 'data-convert' | 'design-convert' | 'all'>('all')
 
+  // Estados para el menú móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobileView, setIsMobileView] = useState(false)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+
+  // Estados para las nuevas funcionalidades
+  const [batchConversion, setBatchConversion] = useState<BatchConversionState>({
+    files: [],
+    overallProgress: 0,
+    completed: 0,
+    failed: 0,
+    status: 'idle'
+  })
+  const [conversionHistory, setConversionHistory] = useState<ConversionHistory[]>([])
+  const [userSettings, setUserSettings] = useState<UserSettings>({
+    defaultQuality: 85,
+    preferredFormats: {},
+    favoriteTools: [],
+    theme: 'auto',
+    showPreview: true,
+    batchSize: 10,
+    autoDownload: true
+  })
+  const [filePreview, setFilePreview] = useState<FilePreview | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [isOfflineMode, setIsOfflineMode] = useState(false)
+  const [cloudIntegration, setCloudIntegration] = useState({
+    googleDrive: false,
+    dropbox: false
+  })
+
   // Estados para merge/split PDFs
   const [multipleFiles, setMultipleFiles] = useState<File[]>([])
   const [splitMode, setSplitMode] = useState<'pages' | 'range'>('pages')
@@ -756,6 +834,36 @@ function App() {
 
   // Analytics tracking
   const [conversionStartTime, setConversionStartTime] = useState<number>(0)
+
+  // Effect para detectar tamaño de pantalla
+  useEffect(() => {
+    const checkMobileView = () => {
+      // Incluir específicamente 1280x800 y resoluciones menores
+      setIsMobileView(window.innerWidth <= 1280)
+    }
+
+    checkMobileView()
+    window.addEventListener('resize', checkMobileView)
+
+    return () => window.removeEventListener('resize', checkMobileView)
+  }, [])
+
+  // Effect para cerrar menú móvil cuando se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isMobileMenuOpen])
 
   const validateFile = (file: File): boolean => {
     const acceptedExtensions = Object.values(selectedTool.acceptTypes).flat()
@@ -784,10 +892,11 @@ function App() {
     return null
   }
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     accept: selectedTool.acceptTypes,
-    multiple: selectedTool.isMultiFile || false,
-    onDrop: (acceptedFiles, rejectedFiles) => {
+    multiple: selectedTool.isMultiFile || userSettings.batchSize > 1,
+    maxFiles: userSettings.batchSize,
+    onDrop: async (acceptedFiles, rejectedFiles) => {
       if (rejectedFiles.length > 0 && acceptedFiles.length === 0) {
         // Si no hay archivos aceptados, intentar detectar herramienta automáticamente
         if (rejectedFiles.length > 0) {
@@ -823,21 +932,35 @@ function App() {
       }
 
       if (acceptedFiles.length > 0) {
-        // Manejar múltiples archivos para merge PDFs
-        if (selectedTool.isMultiFile) {
-          setMultipleFiles(acceptedFiles)
+        // Manejar múltiples archivos - conversión por lotes o herramientas multi-archivo
+        if (acceptedFiles.length > 1 || selectedTool.isMultiFile) {
+          if (selectedTool.isMultiFile) {
+            // Para herramientas como merge PDF
+            setMultipleFiles(acceptedFiles)
+          } else {
+            // Para conversión por lotes
+            addFilesToBatch(acceptedFiles)
+          }
+
           setConversionState({
             status: 'idle',
             progress: 0,
-            message: '',
+            message: `${acceptedFiles.length} archivos agregados`,
             error: undefined
           })
 
           // Track multiple files upload
           acceptedFiles.forEach(file => trackFileUploaded(file.type, file.size))
+
+          // Generar vista previa para el primer archivo si está habilitada
+          if (userSettings.showPreview && acceptedFiles.length > 0) {
+            const preview = await generatePreview(acceptedFiles[0])
+            setFilePreview(preview)
+          }
           return
         }
 
+        // Manejar archivo individual
         const file = acceptedFiles[0]
 
         if (!validateFile(file)) {
@@ -872,6 +995,12 @@ function App() {
 
         setSelectedFile(file)
         setConversionState({ status: 'idle', progress: 0, message: '' })
+
+        // Generar vista previa si está habilitada
+        if (userSettings.showPreview) {
+          const preview = await generatePreview(file)
+          setFilePreview(preview)
+        }
 
         // Track file upload
         trackFileUploaded(file.type, file.size)
@@ -1357,6 +1486,146 @@ function App() {
     }
   }
 
+  // Función para obtener el label de la sección activa
+  const getActiveSectionLabel = () => {
+    const menuItems = [
+      { id: 'all', label: 'Todas', icon: Grid },
+      { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
+      { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
+      { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
+      { id: 'optimize', label: 'Optimizar', icon: Settings },
+      { id: 'image-convert', label: 'Imágenes', icon: Image },
+      { id: 'media-convert', label: 'Audio/Video', icon: Film },
+      { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
+      { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
+      { id: 'archive-convert', label: 'Archivos', icon: Archive },
+      { id: 'data-convert', label: 'Datos', icon: Database },
+      { id: 'design-convert', label: 'Diseño', icon: Layers }
+    ]
+    const activeItem = menuItems.find(item => item.id === activeSection)
+    return activeItem ? activeItem.label : 'Herramientas'
+  }
+
+  // Funciones para conversión por lotes
+  const addFilesToBatch = (files: File[]) => {
+    const newFiles: FileWithProgress[] = files.map(file => ({
+      file,
+      id: crypto.randomUUID(),
+      progress: 0,
+      status: 'pending'
+    }))
+
+    setBatchConversion(prev => ({
+      ...prev,
+      files: [...prev.files, ...newFiles]
+    }))
+  }
+
+  const removeFileFromBatch = (id: string) => {
+    setBatchConversion(prev => ({
+      ...prev,
+      files: prev.files.filter(f => f.id !== id)
+    }))
+  }
+
+  const processBatchConversion = async () => {
+    setBatchConversion(prev => ({ ...prev, status: 'processing' }))
+
+    for (let i = 0; i < batchConversion.files.length; i++) {
+      const fileItem = batchConversion.files[i]
+
+      try {
+        setBatchConversion(prev => ({
+          ...prev,
+          files: prev.files.map(f =>
+            f.id === fileItem.id ? { ...f, status: 'processing' } : f
+          )
+        }))
+
+        // Simular conversión individual
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        setBatchConversion(prev => ({
+          ...prev,
+          files: prev.files.map(f =>
+            f.id === fileItem.id ? {
+              ...f,
+              status: 'completed',
+              progress: 100,
+              downloadUrl: `converted_${f.file.name}`
+            } : f
+          ),
+          completed: prev.completed + 1,
+          overallProgress: ((i + 1) / batchConversion.files.length) * 100
+        }))
+
+        // Agregar al historial
+        addToHistory(fileItem.file, selectedTool)
+
+      } catch (error) {
+        setBatchConversion(prev => ({
+          ...prev,
+          files: prev.files.map(f =>
+            f.id === fileItem.id ? {
+              ...f,
+              status: 'error',
+              error: 'Error en conversión'
+            } : f
+          ),
+          failed: prev.failed + 1
+        }))
+      }
+    }
+
+    setBatchConversion(prev => ({ ...prev, status: 'completed' }))
+  }
+
+  // Funciones para historial
+  const addToHistory = (file: File, tool: ConversionTool) => {
+    const historyItem: ConversionHistory = {
+      id: crypto.randomUUID(),
+      fileName: file.name,
+      inputFormat: file.name.split('.').pop() || '',
+      outputFormat: tool.outputFormat,
+      tool: tool.name,
+      date: new Date(),
+      fileSize: file.size,
+      isFavorite: false
+    }
+
+    setConversionHistory(prev => [historyItem, ...prev].slice(0, 50))
+  }
+
+  const toggleFavorite = (id: string) => {
+    setConversionHistory(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
+      )
+    )
+  }
+
+  const clearHistory = () => {
+    setConversionHistory([])
+  }
+
+  // Función para vista previa
+  const generatePreview = async (file: File): Promise<FilePreview | null> => {
+    const url = URL.createObjectURL(file)
+
+    if (file.type.startsWith('image/')) {
+      return { url, type: 'image' }
+    } else if (file.type === 'application/pdf') {
+      return { url, type: 'pdf' }
+    } else if (file.type.startsWith('video/')) {
+      return { url, type: 'video' }
+    } else if (file.type.startsWith('audio/')) {
+      return { url, type: 'audio' }
+    }
+
+    return null
+  }
+
+
   const getFileSizeLimit = (tool: ConversionTool): number => {
     // If tool has specific maxFileSize, use it
     if (tool.maxFileSize) return tool.maxFileSize
@@ -1397,51 +1666,348 @@ function App() {
       <div className="fixed top-0 left-0 right-0 z-50 border-b transition-colors duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', backdropFilter: 'blur(8px)' }}>
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="flex items-center justify-between py-3">
-            {/* Navigation Tabs */}
-            <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide">
-              {[
-                { id: 'all', label: 'Todas', icon: Grid },
-                { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
-                { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
-                { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
-                { id: 'optimize', label: 'Optimizar', icon: Settings },
-                { id: 'image-convert', label: 'Imágenes', icon: Image },
-                { id: 'media-convert', label: 'Audio/Video', icon: Film },
-                { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
-                { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
-                { id: 'archive-convert', label: 'Archivos', icon: Archive },
-                { id: 'data-convert', label: 'Datos', icon: Database },
-                { id: 'design-convert', label: 'Diseño', icon: Layers }
-              ].map(({ id, label, icon: Icon }) => (
+            {/* Navigation - Desktop/Mobile Adaptive */}
+            {isMobileView ? (
+              // Mobile Menu
+              <div className="relative" ref={mobileMenuRef}>
                 <button
-                  key={id}
-                  onClick={() => setActiveSection(id as any)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    activeSection === id
-                      ? 'shadow-md transform scale-105'
-                      : 'hover:shadow-sm hover:scale-102'
-                  }`}
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
                   style={{
-                    backgroundColor: activeSection === id
-                      ? (isDarkMode ? '#3b82f620' : '#dbeafe')
-                      : 'transparent',
-                    color: activeSection === id ? '#3b82f6' : 'var(--text-secondary)',
-                    borderColor: activeSection === id ? '#3b82f6' : 'transparent'
+                    backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
+                    color: isDarkMode ? '#e5e7eb' : '#374151',
+                    border: `1px solid ${isDarkMode ? '#4b5563' : '#e2e8f0'}`
                   }}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
+                  <Menu className="h-4 w-4" />
+                  <span>{getActiveSectionLabel()}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
-              ))}
-            </div>
 
-            {/* Dark Mode Toggle - Smaller size */}
-            <div className="transform scale-75">
-              <DarkModeToggle isDark={isDarkMode} onToggle={toggleDarkMode} />
+                {/* Dropdown Menu */}
+                {isMobileMenuOpen && (
+                  <div
+                    className="absolute top-full left-0 right-0 mt-2 rounded-lg shadow-lg border z-50"
+                    style={{
+                      backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                      borderColor: isDarkMode ? '#374151' : '#e5e7eb'
+                    }}
+                  >
+                    {[
+                      { id: 'all', label: 'Todas', icon: Grid },
+                      { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
+                      { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
+                      { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
+                      { id: 'optimize', label: 'Optimizar', icon: Settings },
+                      { id: 'image-convert', label: 'Imágenes', icon: Image },
+                      { id: 'media-convert', label: 'Audio/Video', icon: Film },
+                      { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
+                      { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
+                      { id: 'archive-convert', label: 'Archivos', icon: Archive },
+                      { id: 'data-convert', label: 'Datos', icon: Database },
+                      { id: 'design-convert', label: 'Diseño', icon: Layers }
+                    ].map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => {
+                          setActiveSection(id as any)
+                          setIsMobileMenuOpen(false)
+                        }}
+                        className={`flex items-center space-x-3 w-full px-4 py-3 text-left text-sm transition-all duration-150 first:rounded-t-lg last:rounded-b-lg ${
+                          activeSection === id
+                            ? 'font-medium'
+                            : 'hover:font-medium'
+                        }`}
+                        style={{
+                          backgroundColor: activeSection === id
+                            ? (isDarkMode ? '#3b82f620' : '#dbeafe')
+                            : 'transparent',
+                          color: activeSection === id
+                            ? '#3b82f6'
+                            : (isDarkMode ? '#e5e7eb' : '#374151')
+                        }}
+                        onMouseEnter={(e) => {
+                          if (activeSection !== id) {
+                            e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f8fafc'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (activeSection !== id) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Desktop Navigation Tabs
+              <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide">
+                {[
+                  { id: 'all', label: 'Todas', icon: Grid },
+                  { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
+                  { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
+                  { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
+                  { id: 'optimize', label: 'Optimizar', icon: Settings },
+                  { id: 'image-convert', label: 'Imágenes', icon: Image },
+                  { id: 'media-convert', label: 'Audio/Video', icon: Film },
+                  { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
+                  { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
+                  { id: 'archive-convert', label: 'Archivos', icon: Archive },
+                  { id: 'data-convert', label: 'Datos', icon: Database },
+                  { id: 'design-convert', label: 'Diseño', icon: Layers }
+                ].map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveSection(id as any)}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      activeSection === id
+                        ? 'shadow-md transform scale-105'
+                        : 'hover:shadow-sm hover:scale-102'
+                    }`}
+                    style={{
+                      backgroundColor: activeSection === id
+                        ? (isDarkMode ? '#3b82f620' : '#dbeafe')
+                        : 'transparent',
+                      color: activeSection === id ? '#3b82f6' : 'var(--text-secondary)',
+                      borderColor: activeSection === id ? '#3b82f6' : 'transparent'
+                    }}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Right side controls */}
+            <div className="flex items-center space-x-3">
+              {/* Action buttons */}
+              <div className="flex items-center space-x-2">
+                {/* History button */}
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
+                  style={{
+                    backgroundColor: showHistory ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
+                    color: showHistory ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
+                  }}
+                  title="Historial de conversiones"
+                >
+                  <History className="h-4 w-4" />
+                </button>
+
+                {/* Settings button */}
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
+                  style={{
+                    backgroundColor: showSettings ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
+                    color: showSettings ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
+                  }}
+                  title="Configuración"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+
+                {/* Dark Mode Toggle - Smaller size */}
+                <div className="transform scale-75">
+                  <DarkModeToggle isDark={isDarkMode} onToggle={toggleDarkMode} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* History Panel */}
+      {showHistory && (
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
+            style={{
+              backgroundColor: isDarkMode ? '#1f2937' : '#ffffff'
+            }}
+          >
+            <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}>
+              <h2 className="text-xl font-bold" style={{ color: isDarkMode ? '#e5e7eb' : '#1f2937' }}>
+                Historial de Conversiones
+              </h2>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {conversionHistory.length === 0 ? (
+                <div className="text-center py-12" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                  <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No hay conversiones en el historial</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {conversionHistory.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
+                        borderColor: isDarkMode ? '#4b5563' : '#e2e8f0'
+                      }}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="h-5 w-5 text-blue-500" />
+                          <div>
+                            <p className="font-medium" style={{ color: isDarkMode ? '#e5e7eb' : '#1f2937' }}>
+                              {item.fileName}
+                            </p>
+                            <p className="text-sm" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                              {item.inputFormat.toUpperCase()} → {item.outputFormat.toUpperCase()} • {item.tool}
+                            </p>
+                            <p className="text-xs" style={{ color: isDarkMode ? '#6b7280' : '#9ca3af' }}>
+                              {new Date(item.date).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => toggleFavorite(item.id)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            item.isFavorite ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
+                          }`}
+                        >
+                          <Star className={`h-4 w-4 ${item.isFavorite ? 'fill-current' : ''}`} />
+                        </button>
+                        {item.downloadUrl && (
+                          <button className="p-2 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900">
+                            <Download className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t flex justify-between" style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}>
+              <button
+                onClick={clearHistory}
+                className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
+              >
+                <Trash2 className="h-4 w-4 inline mr-2" />
+                Limpiar Historial
+              </button>
+              <p className="text-sm self-center" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                {conversionHistory.length} conversiones
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            style={{
+              backgroundColor: isDarkMode ? '#1f2937' : '#ffffff'
+            }}
+          >
+            <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}>
+              <h2 className="text-xl font-bold" style={{ color: isDarkMode ? '#e5e7eb' : '#1f2937' }}>
+                Configuración
+              </h2>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Quality Settings */}
+              <div>
+                <label className="block text-sm font-medium mb-3" style={{ color: isDarkMode ? '#e5e7eb' : '#374151' }}>
+                  Calidad por defecto: {userSettings.defaultQuality}%
+                </label>
+                <input
+                  type="range"
+                  min="50"
+                  max="100"
+                  value={userSettings.defaultQuality}
+                  onChange={(e) => setUserSettings(prev => ({ ...prev, defaultQuality: parseInt(e.target.value) }))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Batch Size */}
+              <div>
+                <label className="block text-sm font-medium mb-3" style={{ color: isDarkMode ? '#e5e7eb' : '#374151' }}>
+                  Archivos por lote: {userSettings.batchSize}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="20"
+                  value={userSettings.batchSize}
+                  onChange={(e) => setUserSettings(prev => ({ ...prev, batchSize: parseInt(e.target.value) }))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Toggle Settings */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span style={{ color: isDarkMode ? '#e5e7eb' : '#374151' }}>Vista previa automática</span>
+                  <button
+                    onClick={() => setUserSettings(prev => ({ ...prev, showPreview: !prev.showPreview }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      userSettings.showPreview ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        userSettings.showPreview ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span style={{ color: isDarkMode ? '#e5e7eb' : '#374151' }}>Descarga automática</span>
+                  <button
+                    onClick={() => setUserSettings(prev => ({ ...prev, autoDownload: !prev.autoDownload }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      userSettings.autoDownload ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        userSettings.autoDownload ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-8 max-w-4xl" style={{ paddingTop: 'clamp(6rem, 8rem, 10rem)' }}>
 
@@ -1481,7 +2047,7 @@ function App() {
               className="text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed mb-8"
               style={{ color: 'var(--text-secondary)' }}
             >
-              El conversor de archivos más completo del mundo.{' '}
+              El conversor de archivos más completo.{' '}
               <span className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Más de 60 formatos
               </span>{' '}
@@ -2093,6 +2659,103 @@ function App() {
                   >
                     {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                   </motion.p>
+
+                  {/* File Preview */}
+                  {filePreview && userSettings.showPreview && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                      className="mt-4 relative group"
+                    >
+                      <div
+                        className="relative overflow-hidden rounded-lg border-2 cursor-pointer"
+                        style={{
+                          borderColor: isDarkMode ? '#374151' : '#e5e7eb'
+                        }}
+                        onClick={() => {
+                          // Open preview in modal
+                          const modal = window.open('', '_blank')
+                          if (modal) {
+                            modal.document.write(`
+                              <html>
+                                <head><title>Vista Previa - ${selectedFile.name}</title></head>
+                                <body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;">
+                                  ${filePreview.type === 'image'
+                                    ? `<img src="${filePreview.url}" style="max-width:100%;max-height:100%;object-fit:contain;" />`
+                                    : filePreview.type === 'pdf'
+                                    ? `<iframe src="${filePreview.url}" style="width:100%;height:100%;border:none;" />`
+                                    : filePreview.type === 'video'
+                                    ? `<video src="${filePreview.url}" controls style="max-width:100%;max-height:100%;" />`
+                                    : filePreview.type === 'audio'
+                                    ? `<audio src="${filePreview.url}" controls style="width:300px;" />`
+                                    : '<p style="color:white;">Vista previa no disponible</p>'
+                                  }
+                                </body>
+                              </html>
+                            `)
+                          }
+                        }}
+                      >
+                        {filePreview.type === 'image' && (
+                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <img
+                              src={filePreview.url}
+                              alt="Preview"
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
+                        )}
+                        {filePreview.type === 'pdf' && (
+                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <div className="text-center">
+                              <FileText className="h-12 w-12 mx-auto mb-2 text-red-600" />
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Documento PDF</p>
+                              <p className="text-xs text-gray-500">Click para ver completo</p>
+                            </div>
+                          </div>
+                        )}
+                        {filePreview.type === 'video' && (
+                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <div className="text-center">
+                              <Video className="h-12 w-12 mx-auto mb-2 text-blue-600" />
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Video</p>
+                              <p className="text-xs text-gray-500">Click para reproducir</p>
+                            </div>
+                          </div>
+                        )}
+                        {filePreview.type === 'audio' && (
+                          <div className="aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <div className="text-center">
+                              <Headphones className="h-12 w-12 mx-auto mb-2 text-green-600" />
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Audio</p>
+                              <p className="text-xs text-gray-500">Click para reproducir</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Preview overlay */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+                              <Eye className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Preview close button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setFilePreview(null)
+                        }}
+                        className="absolute top-2 right-2 bg-gray-900 bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-1 transition-all duration-200"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </motion.div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div
@@ -2492,7 +3155,7 @@ function App() {
 
             {/* Convert Button */}
             {((selectedFile && !selectedTool.isMultiFile) || (multipleFiles.length > 0 && selectedTool.isMultiFile)) && conversionState.status === 'idle' && (
-              <div className="flex justify-center mt-8">
+              <div className="flex justify-center mt-8 space-x-4">
                 <button
                   onClick={convertFile}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3"
@@ -2504,6 +3167,27 @@ function App() {
                      `Convertir a ${selectedTool.outputFormat.toUpperCase()}`}
                   </span>
                 </button>
+
+                {/* Batch Conversion Button */}
+                {batchConversion.files.length > 0 && (
+                  <button
+                    onClick={processBatchConversion}
+                    disabled={batchConversion.status === 'processing'}
+                    className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3"
+                  >
+                    {batchConversion.status === 'processing' ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <FolderOpen className="h-5 w-5" />
+                    )}
+                    <span>
+                      {batchConversion.status === 'processing'
+                        ? `Procesando ${batchConversion.files.length} archivos...`
+                        : `Convertir Lote (${batchConversion.files.length})`
+                      }
+                    </span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -2568,6 +3252,157 @@ function App() {
                   Intentar de nuevo
                 </button>
               </div>
+            )}
+
+            {/* Batch Conversion Panel */}
+            {batchConversion.files.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-8 p-6 rounded-xl border"
+                style={{
+                  backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                  borderColor: isDarkMode ? '#374151' : '#e5e7eb'
+                }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#e5e7eb' : '#1f2937' }}>
+                    Conversión por Lotes ({batchConversion.files.length} archivos)
+                  </h3>
+                  <button
+                    onClick={() => setBatchConversion({ files: [], overallProgress: 0, completed: 0, failed: 0, status: 'idle' })}
+                    className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Overall Progress */}
+                {batchConversion.status === 'processing' && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-2" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                      <span>Progreso general</span>
+                      <span>{Math.round(batchConversion.overallProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                      <div
+                        className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${batchConversion.overallProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* File List */}
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {batchConversion.files.map((fileItem) => (
+                    <div
+                      key={fileItem.id}
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
+                        borderColor: isDarkMode ? '#4b5563' : '#e2e8f0'
+                      }}
+                    >
+                      <div className="flex items-center space-x-3 flex-1">
+                        <div className="relative">
+                          {fileItem.status === 'completed' && (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          )}
+                          {fileItem.status === 'processing' && (
+                            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                          )}
+                          {fileItem.status === 'error' && (
+                            <AlertCircle className="h-5 w-5 text-red-500" />
+                          )}
+                          {fileItem.status === 'pending' && (
+                            <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate" style={{ color: isDarkMode ? '#e5e7eb' : '#1f2937' }}>
+                            {fileItem.file.name}
+                          </p>
+                          <p className="text-sm" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                            {(fileItem.file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                          {fileItem.error && (
+                            <p className="text-sm text-red-500 mt-1">{fileItem.error}</p>
+                          )}
+                        </div>
+
+                        {/* Progress bar for individual file */}
+                        {fileItem.status === 'processing' && (
+                          <div className="w-24">
+                            <div className="w-full bg-gray-200 rounded-full h-1 dark:bg-gray-700">
+                              <div
+                                className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                                style={{ width: `${fileItem.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-2 ml-4">
+                        {fileItem.downloadUrl && fileItem.status === 'completed' && (
+                          <button
+                            onClick={() => {
+                              // Simulate download
+                              const a = document.createElement('a')
+                              a.href = fileItem.downloadUrl
+                              a.download = fileItem.file.name.replace(/\.[^/.]+$/, `.${selectedTool.outputFormat}`)
+                              a.click()
+                            }}
+                            className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900 rounded-lg transition-colors"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => removeFileFromBatch(fileItem.id)}
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Batch Summary */}
+                {batchConversion.status === 'completed' && (
+                  <div className="mt-4 pt-4 border-t" style={{ borderColor: isDarkMode ? '#4b5563' : '#e5e7eb' }}>
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                        <span className="text-green-600 font-medium">{batchConversion.completed} completados</span>
+                        {batchConversion.failed > 0 && (
+                          <span className="text-red-600 font-medium ml-4">{batchConversion.failed} fallidos</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          // Download all completed files
+                          batchConversion.files
+                            .filter(f => f.status === 'completed' && f.downloadUrl)
+                            .forEach(f => {
+                              const a = document.createElement('a')
+                              a.href = f.downloadUrl!
+                              a.download = f.file.name.replace(/\.[^/.]+$/, `.${selectedTool.outputFormat}`)
+                              a.click()
+                            })
+                        }}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>Descargar Todos</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
             )}
           </div>
         </div>
@@ -2686,12 +3521,8 @@ function App() {
           <div className="pt-8 border-t flex flex-col md:flex-row justify-between items-center" style={{ borderColor: 'var(--border-secondary)' }}>
             <div className="flex items-center space-x-6 text-sm mb-4 md:mb-0">
               <p style={{ color: 'var(--text-tertiary)' }}>
-                &copy; 2024 ConvertPro. Todos los derechos reservados.
+                &copy; 2025 ConvertPro. Todos los derechos reservados.
               </p>
-              <div className="flex items-center space-x-2">
-                <span style={{ color: 'var(--text-tertiary)' }}>Powered by</span>
-                <span className="font-semibold text-blue-600">CloudConvert</span>
-              </div>
             </div>
 
             <div className="flex items-center space-x-4 text-xs">
