@@ -54,7 +54,7 @@ PRÓXIMOS PASOS:
     return blob
   }
 
-  async createWordFromText(text: string, fileName: string): Promise<Blob> {
+  async createWordFromText(text: string, _fileName: string): Promise<Blob> {
     console.log('🚨 createWordFromText llamado')
     console.log('🚨 Texto recibido (primeros 300 chars):', text.substring(0, 300))
     console.log('🚨 Longitud total del texto:', text.length)
@@ -73,7 +73,6 @@ PRÓXIMOS PASOS:
     console.log(`🚨 Primeras 5 líneas:`, lines.slice(0, 5))
 
     const paragraphs: Paragraph[] = []
-    let listLevel = 0
 
     for (const line of lines) {
       const trimmedLine = line.trim()

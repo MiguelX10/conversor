@@ -204,7 +204,7 @@ export class CloudConvertService {
   /**
    * Crear tarea de conversión
    */
-  private async createConvertTask(job: any, uploadTask: any): Promise<any> {
+  private async createConvertTask(job: any, _uploadTask: any): Promise<any> {
     // La conversión se inicia automáticamente con el job
     const convertTask = job.tasks.find((task: any) => task.name === 'convert-to-docx')
 

@@ -6,7 +6,7 @@ import { saveAs } from 'file-saver'
 import DarkModeToggle from './components/DarkModeToggle'
 import LoadingAnimation from './components/LoadingAnimation'
 import { useDarkMode } from './contexts/DarkModeContext'
-import { trackConversionStarted, trackConversionCompleted, trackConversionError, trackToolSelection, trackFileUploaded, trackDarkModeToggle } from './utils/analytics'
+import { trackConversionStarted, trackConversionCompleted, trackConversionError, trackToolSelection, trackFileUploaded } from './utils/analytics'
 
 interface ConversionState {
   status: 'idle' | 'uploading' | 'converting' | 'downloading' | 'completed' | 'error'
@@ -818,14 +818,8 @@ function App() {
     autoDownload: true
   })
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [isOfflineMode, setIsOfflineMode] = useState(false)
-  const [cloudIntegration, setCloudIntegration] = useState({
-    googleDrive: false,
-    dropbox: false
-  })
 
   // Estados para merge/split PDFs
   const [multipleFiles, setMultipleFiles] = useState<File[]>([])
@@ -892,7 +886,7 @@ function App() {
     return null
   }
 
-  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: selectedTool.acceptTypes,
     multiple: selectedTool.isMultiFile || userSettings.batchSize > 1,
     maxFiles: userSettings.batchSize,
@@ -1312,8 +1306,8 @@ function App() {
 
       const taskData = await taskResponse.json()
       const resultFile = taskData.data.result.files[0]
-      const downloadUrl = resultFile.url
-      const cloudConvertFilename = resultFile.filename
+      const downloadUrl = resultFile?.url || ''
+      const cloudConvertFilename = resultFile?.filename || 'archivo_convertido'
 
       console.log('✅ Descargando:', cloudConvertFilename, `(${resultFile.size} bytes)`)
 
@@ -1327,7 +1321,7 @@ function App() {
       if (filename.endsWith(`.${inputFormat}.${currentOutputFormat}`)) {
         filename = filename.replace(`.${inputFormat}.${currentOutputFormat}`, `.${currentOutputFormat}`)
       } else if (!filename.includes(`.${currentOutputFormat}`)) {
-        const baseName = selectedFile.name.replace(/\.[^/.]+$/, '')
+        const baseName = selectedFile?.name.replace(/\.[^/.]+$/, '') || 'archivo_convertido'
         filename = selectedTool.isOptimization
           ? `${baseName}_optimizado.${currentOutputFormat}`
           : selectedTool.isImageConverter
