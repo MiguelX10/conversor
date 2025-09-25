@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { FileText, Upload, Download, Loader2, AlertCircle, CheckCircle, Image, FileSpreadsheet, Presentation, Globe, Grid, Minimize2, Video, Settings, Combine, SplitSquareHorizontal, Music, Film, Archive, FileImage, FileType, Palette, FileAudio, Headphones, Volume2, Camera, Zap, Code, BookOpen, FileCode, Layers, Lock, Unlock, Database, HardDrive, Smartphone, Menu, ChevronDown, Search, Filter, History, Eye, Trash2, Star, FolderOpen, Cloud, Share, X, Plus, Minus, RotateCcw, Maximize2, Play, Pause } from 'lucide-react'
+import { FileText, Upload, Download, Loader2, AlertCircle, CheckCircle, Image, FileSpreadsheet, Presentation, Globe, Grid, Minimize2, Video, Settings, Combine, SplitSquareHorizontal, Music, Film, Archive, FileImage, FileType, Palette, FileAudio, Headphones, Volume2, Camera, Zap, Code, BookOpen, FileCode, Layers, Lock, Database, HardDrive, Smartphone, Menu, ChevronDown, History, Eye, Trash2, Star, FolderOpen, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { saveAs } from 'file-saver'
 import DarkModeToggle from './components/DarkModeToggle'
@@ -3345,7 +3345,7 @@ function App() {
                             onClick={() => {
                               // Simulate download
                               const a = document.createElement('a')
-                              a.href = fileItem.downloadUrl
+                              a.href = fileItem.downloadUrl || '#'
                               a.download = fileItem.file.name.replace(/\.[^/.]+$/, `.${selectedTool.outputFormat}`)
                               a.click()
                             }}
@@ -3382,10 +3382,12 @@ function App() {
                           batchConversion.files
                             .filter(f => f.status === 'completed' && f.downloadUrl)
                             .forEach(f => {
-                              const a = document.createElement('a')
-                              a.href = f.downloadUrl!
-                              a.download = f.file.name.replace(/\.[^/.]+$/, `.${selectedTool.outputFormat}`)
-                              a.click()
+                              if (f.downloadUrl) {
+                                const a = document.createElement('a')
+                                a.href = f.downloadUrl
+                                a.download = f.file.name.replace(/\.[^/.]+$/, `.${selectedTool.outputFormat}`)
+                                a.click()
+                              }
                             })
                         }}
                         className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
