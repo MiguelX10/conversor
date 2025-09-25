@@ -75,6 +75,34 @@ export const trackAdClick = (adPosition: string) => {
   });
 };
 
+export const trackAdImpression = (adPosition: string, adSlot: string) => {
+  trackEvent('ad_impression', {
+    ad_position: adPosition,
+    ad_slot: adSlot,
+    event_category: 'monetization'
+  });
+};
+
+export const trackRewardedVideoStart = () => {
+  trackEvent('rewarded_video_start', {
+    event_category: 'monetization'
+  });
+};
+
+export const trackRewardedVideoComplete = () => {
+  trackEvent('rewarded_video_complete', {
+    event_category: 'monetization',
+    value: 1
+  });
+};
+
+export const trackRewardedVideoSkip = (secondsWatched: number) => {
+  trackEvent('rewarded_video_skip', {
+    seconds_watched: secondsWatched,
+    event_category: 'monetization'
+  });
+};
+
 export const trackPremiumInterest = (feature: string) => {
   trackEvent('premium_interest', {
     feature: feature,

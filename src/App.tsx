@@ -7,6 +7,9 @@ import DarkModeToggle from './components/DarkModeToggle'
 import LoadingAnimation from './components/LoadingAnimation'
 import { useDarkMode } from './contexts/DarkModeContext'
 import { trackConversionStarted, trackConversionCompleted, trackConversionError, trackToolSelection, trackFileUploaded } from './utils/analytics'
+import { MonetizationService } from './services/monetizationService'
+import RewardedVideoModal from './components/RewardedVideoModal'
+import UsageBanner from './components/UsageBanner'
 
 interface ConversionState {
   status: 'idle' | 'uploading' | 'converting' | 'downloading' | 'completed' | 'error'
@@ -826,6 +829,9 @@ function App() {
 
   // Estados para merge/split PDFs
   const [multipleFiles, setMultipleFiles] = useState<File[]>([])
+
+  // Estados para monetización
+  const [showRewardedVideoModal, setShowRewardedVideoModal] = useState(false)
   const [splitMode, setSplitMode] = useState<'pages' | 'range'>('pages')
   const [splitPages, setSplitPages] = useState<string>('1-10') // Rango como "1-5,8,10-12"
 
@@ -1006,6 +1012,22 @@ function App() {
   })
 
   const convertFile = async () => {
+    // Verificar límites de conversión antes de proceder
+    if (!MonetizationService.canConvert()) {
+      const state = MonetizationService.getMonetizationState()
+      if (state.canWatchAd) {
+        setShowRewardedVideoModal(true)
+        return
+      } else {
+        // Sin más opciones por hoy
+        alert('Has agotado todas tus conversiones gratuitas por hoy. Las conversiones se reinician cada 24 horas.')
+        return
+      }
+    }
+
+    // Incrementar contador de conversiones
+    MonetizationService.incrementConversion()
+
     // Validar que tengamos archivos según el tipo de herramienta
     if (selectedTool.isMultiFile && multipleFiles.length === 0) return
     if (!selectedTool.isMultiFile && !selectedFile) return
@@ -1827,6 +1849,11 @@ function App() {
                   <DarkModeToggle isDark={isDarkMode} onToggle={toggleDarkMode} />
                 </div>
               </div>
+            </div>
+
+            {/* Usage Banner */}
+            <div className="px-4 pb-4">
+              <UsageBanner onShowRewardedVideo={() => setShowRewardedVideoModal(true)} />
             </div>
           </div>
         </div>
@@ -3555,6 +3582,19 @@ function App() {
             </div>
           </div>
         </footer>
+
+        {/* Modals */}
+        <RewardedVideoModal
+          isOpen={showRewardedVideoModal}
+          onClose={() => setShowRewardedVideoModal(false)}
+          onVideoWatched={() => {
+            MonetizationService.rewardAdWatch()
+            setShowRewardedVideoModal(false)
+            // Reintentar conversión después de ver el anuncio
+            convertFile()
+          }}
+          remainingAdWatches={MonetizationService.getMonetizationState().remainingAdWatches}
+        />
       </div>
     </div>
   )
