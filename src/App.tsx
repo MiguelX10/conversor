@@ -10,6 +10,10 @@ import { trackConversionStarted, trackConversionCompleted, trackConversionError,
 import { MonetizationService } from './services/monetizationService'
 import RewardedVideoModal from './components/RewardedVideoModal'
 import UsageBanner from './components/UsageBanner'
+import { useAuth } from './contexts/AuthContext'
+import LoginModal from './components/LoginModal'
+import UserProfile from './components/UserProfile'
+import PremiumModal from './components/PremiumModal'
 
 interface ConversionState {
   status: 'idle' | 'uploading' | 'converting' | 'downloading' | 'completed' | 'error'
@@ -201,12 +205,13 @@ const CONVERSION_TOOLS: ConversionTool[] = [
   {
     id: 'jpg-to-pdf',
     name: 'JPG a PDF',
-    description: 'Convierte imagen JPG a documento PDF',
+    description: 'Convierte imágenes JPG/PNG a documento PDF (soporta múltiples imágenes)',
     inputFormat: 'jpg',
     outputFormat: 'pdf',
     icon: Image,
     acceptTypes: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] },
-    category: 'to-pdf'
+    category: 'to-pdf',
+    isMultiFile: true
   },
   {
     id: 'html-to-pdf',
@@ -781,6 +786,7 @@ const CONVERSION_TOOLS: ConversionTool[] = [
 
 function App() {
   const { isDarkMode, toggleDarkMode } = useDarkMode()
+  const { user, isRegistered, isAnonymous } = useAuth()
   const [selectedTool, setSelectedTool] = useState<ConversionTool>(CONVERSION_TOOLS[0])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [conversionState, setConversionState] = useState<ConversionState>({
@@ -813,7 +819,14 @@ function App() {
     failed: 0,
     status: 'idle'
   })
-  const [conversionHistory, setConversionHistory] = useState<ConversionHistory[]>([])
+  const [conversionHistory, setConversionHistory] = useState<ConversionHistory[]>(() => {
+    try {
+      const saved = localStorage.getItem('conversionHistory')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
   const [userSettings, setUserSettings] = useState<UserSettings>({
     defaultQuality: 85,
     preferredFormats: {},
@@ -832,6 +845,9 @@ function App() {
 
   // Estados para monetización
   const [showRewardedVideoModal, setShowRewardedVideoModal] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [premiumModalTrigger, setPremiumModalTrigger] = useState<'conversions_exhausted' | 'premium_feature' | 'manual'>('manual')
   const [splitMode, setSplitMode] = useState<'pages' | 'range'>('pages')
   const [splitPages, setSplitPages] = useState<string>('1-10') // Rango como "1-5,8,10-12"
 
@@ -1013,20 +1029,20 @@ function App() {
 
   const convertFile = async () => {
     // Verificar límites de conversión antes de proceder
-    if (!MonetizationService.canConvert()) {
-      const state = MonetizationService.getMonetizationState()
+    if (!MonetizationService.canConvert(isRegistered, user?.uid)) {
+      const state = MonetizationService.getMonetizationState(isRegistered, user?.uid)
+      console.log('convertFile - cannot convert, state:', state);
       if (state.canWatchAd) {
         setShowRewardedVideoModal(true)
         return
       } else {
-        // Sin más opciones por hoy
-        alert('Has agotado todas tus conversiones gratuitas por hoy. Las conversiones se reinician cada 24 horas.')
+        // Sin más opciones por hoy - el banner se mostrará automáticamente
         return
       }
     }
 
     // Incrementar contador de conversiones
-    MonetizationService.incrementConversion()
+    MonetizationService.incrementConversion(isRegistered, user?.uid)
 
     // Validar que tengamos archivos según el tipo de herramienta
     if (selectedTool.isMultiFile && multipleFiles.length === 0) return
@@ -1361,6 +1377,33 @@ function App() {
       const duration = Date.now() - conversionStartTime
       trackConversionCompleted(selectedTool.inputFormat, selectedTool.outputFormat, selectedTool.name, duration)
 
+      // Agregar al historial
+      if (selectedTool.isMultiFile && multipleFiles.length > 0) {
+        // Para conversiones multi-archivo, crear una sola entrada en el historial
+        const historyItem: ConversionHistory = {
+          id: crypto.randomUUID(),
+          fileName: `${multipleFiles.length} ${selectedTool.inputFormat.toUpperCase()} → ${selectedTool.outputFormat.toUpperCase()}`,
+          inputFormat: selectedTool.inputFormat,
+          outputFormat: selectedTool.outputFormat,
+          tool: selectedTool.name,
+          date: new Date(),
+          fileSize: multipleFiles.reduce((total, file) => total + file.size, 0),
+          isFavorite: false
+        }
+        setConversionHistory(prev => {
+          const newHistory = [historyItem, ...prev].slice(0, 50)
+          try {
+            localStorage.setItem('conversionHistory', JSON.stringify(newHistory))
+          } catch (error) {
+            console.warn('No se pudo guardar el historial en localStorage:', error)
+          }
+          return newHistory
+        })
+      } else if (selectedFile) {
+        // Para conversiones de archivo único
+        addToHistory(selectedFile, selectedTool)
+      }
+
       setConversionState({
         status: 'completed',
         progress: 100,
@@ -1479,6 +1522,30 @@ function App() {
     if (category === 'all') {
       return CONVERSION_TOOLS
     }
+
+    // Lógica especial para categorías que incluyen herramientas de múltiples categorías
+    if (category === 'image-convert') {
+      return CONVERSION_TOOLS.filter(tool =>
+        tool.category === 'image-convert' ||
+        tool.inputFormat.includes('jpg') || tool.inputFormat.includes('png') ||
+        tool.outputFormat.includes('jpg') || tool.outputFormat.includes('png') ||
+        tool.id === 'pdf-to-jpg' || tool.id === 'jpg-to-pdf'
+      )
+    }
+
+    if (category === 'document-convert') {
+      return CONVERSION_TOOLS.filter(tool =>
+        tool.category === 'document-convert' ||
+        tool.inputFormat.includes('docx') || tool.inputFormat.includes('doc') ||
+        tool.outputFormat.includes('docx') || tool.outputFormat.includes('doc') ||
+        tool.inputFormat.includes('xlsx') || tool.inputFormat.includes('xls') ||
+        tool.outputFormat.includes('xlsx') || tool.outputFormat.includes('xls') ||
+        tool.inputFormat.includes('pptx') || tool.inputFormat.includes('ppt') ||
+        tool.outputFormat.includes('pptx') || tool.outputFormat.includes('ppt') ||
+        tool.id.includes('word') || tool.id.includes('excel') || tool.id.includes('powerpoint')
+      )
+    }
+
     return CONVERSION_TOOLS.filter(tool => tool.category === category)
   }
 
@@ -1623,19 +1690,41 @@ function App() {
       isFavorite: false
     }
 
-    setConversionHistory(prev => [historyItem, ...prev].slice(0, 50))
+    setConversionHistory(prev => {
+      const newHistory = [historyItem, ...prev].slice(0, 50)
+      // Guardar en localStorage
+      try {
+        localStorage.setItem('conversionHistory', JSON.stringify(newHistory))
+      } catch (error) {
+        console.warn('No se pudo guardar el historial en localStorage:', error)
+      }
+      return newHistory
+    })
   }
 
   const toggleFavorite = (id: string) => {
-    setConversionHistory(prev =>
-      prev.map(item =>
+    setConversionHistory(prev => {
+      const newHistory = prev.map(item =>
         item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
       )
-    )
+      // Guardar en localStorage
+      try {
+        localStorage.setItem('conversionHistory', JSON.stringify(newHistory))
+      } catch (error) {
+        console.warn('No se pudo guardar el historial en localStorage:', error)
+      }
+      return newHistory
+    })
   }
 
   const clearHistory = () => {
     setConversionHistory([])
+    // Limpiar localStorage
+    try {
+      localStorage.removeItem('conversionHistory')
+    } catch (error) {
+      console.warn('No se pudo limpiar el historial del localStorage:', error)
+    }
   }
 
   // Función para vista previa
@@ -1844,6 +1933,19 @@ function App() {
                   <Settings className="h-4 w-4" />
                 </button>
 
+                {/* User Profile / Login Button */}
+                {isRegistered ? (
+                  <UserProfile />
+                ) : (
+                  <button
+                    onClick={() => setShowLoginModal(true)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Registrarse
+                  </button>
+                )}
+
                 {/* Dark Mode Toggle - Smaller size */}
                 <div className="transform scale-75">
                   <DarkModeToggle isDark={isDarkMode} onToggle={toggleDarkMode} />
@@ -1853,7 +1955,15 @@ function App() {
 
             {/* Usage Banner */}
             <div className="px-4 pb-4">
-              <UsageBanner onShowRewardedVideo={() => setShowRewardedVideoModal(true)} />
+              <UsageBanner
+                onShowRewardedVideo={() => setShowRewardedVideoModal(true)}
+                onShowPremium={() => {
+                  setPremiumModalTrigger('manual')
+                  setShowPremiumModal(true)
+                }}
+                isRegistered={isRegistered}
+                userUid={user?.uid}
+              />
             </div>
           </div>
         </div>
@@ -3205,7 +3315,8 @@ function App() {
                 >
                   <selectedTool.icon className="h-5 w-5" />
                   <span>
-                    {selectedTool.isMultiFile ? 'Combinar PDFs' :
+                    {selectedTool.isMultiFile && selectedTool.id === 'jpg-to-pdf' ? 'Crear PDF con Imágenes' :
+                     selectedTool.isMultiFile ? 'Combinar PDFs' :
                      selectedTool.isSplitTool ? 'Dividir PDF' :
                      `Convertir a ${selectedTool.outputFormat.toUpperCase()}`}
                   </span>
@@ -3588,12 +3699,28 @@ function App() {
           isOpen={showRewardedVideoModal}
           onClose={() => setShowRewardedVideoModal(false)}
           onVideoWatched={() => {
-            MonetizationService.rewardAdWatch()
+            MonetizationService.rewardAdWatch(user?.uid)
             setShowRewardedVideoModal(false)
             // Reintentar conversión después de ver el anuncio
             convertFile()
           }}
-          remainingAdWatches={MonetizationService.getMonetizationState().remainingAdWatches}
+          remainingAdWatches={MonetizationService.getMonetizationState(isRegistered, user?.uid).remainingAdWatches}
+        />
+
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          onSuccess={(user) => {
+            console.log('Usuario registrado exitosamente:', user)
+            setShowLoginModal(false)
+          }}
+          trigger="conversion_limit"
+        />
+
+        <PremiumModal
+          isOpen={showPremiumModal}
+          onClose={() => setShowPremiumModal(false)}
+          trigger={premiumModalTrigger}
         />
       </div>
     </div>

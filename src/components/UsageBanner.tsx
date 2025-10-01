@@ -1,14 +1,20 @@
-import { Gift, AlertCircle } from 'lucide-react';
+import { Gift, AlertCircle, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { MonetizationService } from '../services/monetizationService';
 
 interface UsageBannerProps {
   onShowRewardedVideo: () => void;
+  onShowPremium: () => void;
+  isRegistered: boolean;
+  userUid?: string;
 }
 
-export default function UsageBanner({ onShowRewardedVideo }: UsageBannerProps) {
-  const state = MonetizationService.getMonetizationState();
-  const usageText = MonetizationService.getUsageText();
+export default function UsageBanner({ onShowRewardedVideo, onShowPremium, isRegistered, userUid }: UsageBannerProps) {
+  const state = MonetizationService.getMonetizationState(isRegistered, userUid);
+  const usageText = MonetizationService.getUsageText(isRegistered, userUid);
+
+  // Debug log
+  console.log('UsageBanner state:', state);
 
 
   if (state.remainingConversions === 0) {
@@ -17,23 +23,30 @@ export default function UsageBanner({ onShowRewardedVideo }: UsageBannerProps) {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200 dark:border-orange-800 px-4 py-3 rounded-xl"
+        className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/30 dark:to-orange-900/30 border-2 border-red-300 dark:border-red-600 px-4 py-3 rounded-xl shadow-sm"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-            <span className="text-orange-800 dark:text-orange-200 font-medium">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <span className="text-red-900 dark:text-red-100 font-semibold">
               Conversiones agotadas por hoy
             </span>
           </div>
-          {state.canWatchAd && (
+          <div className="flex gap-2">
             <button
               onClick={onShowRewardedVideo}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md hover:shadow-lg"
             >
               Ver Anuncio
             </button>
-          )}
+            <button
+              onClick={onShowPremium}
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md hover:shadow-lg flex items-center gap-1"
+            >
+              <Crown className="w-4 h-4" />
+              Premium
+            </button>
+          </div>
         </div>
       </motion.div>
     );
@@ -45,23 +58,30 @@ export default function UsageBanner({ onShowRewardedVideo }: UsageBannerProps) {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 px-4 py-3 rounded-xl"
+        className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/30 dark:to-amber-900/30 border-2 border-yellow-400 dark:border-yellow-600 px-4 py-3 rounded-xl shadow-sm"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Gift className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-            <span className="text-yellow-800 dark:text-yellow-200">
+            <Gift className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <span className="text-amber-900 dark:text-amber-100 font-semibold">
               {usageText}
             </span>
           </div>
-          {state.canWatchAd && (
+          <div className="flex gap-2">
             <button
               onClick={onShowRewardedVideo}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md hover:shadow-lg"
             >
               Ver Anuncio
             </button>
-          )}
+            <button
+              onClick={onShowPremium}
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md hover:shadow-lg flex items-center gap-1"
+            >
+              <Crown className="w-4 h-4" />
+              Premium
+            </button>
+          </div>
         </div>
       </motion.div>
     );

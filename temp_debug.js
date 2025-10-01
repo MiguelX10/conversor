@@ -1,0 +1,1 @@
+console.log('=== ESTADO ACTUAL ==='); console.log('LocalStorage:', JSON.stringify(localStorage.getItem('convertpro_usage'), null, 2)); console.log('Fecha hoy:', new Date().setHours(0,0,0,0)); console.log('===');
