@@ -1,6 +1,7 @@
 // Contenido principal de la app - extraído para usar hooks de auth
 import { useState, useEffect } from 'react'
 import { Upload } from 'lucide-react'
+import { motion } from 'framer-motion'
 import DarkModeToggle from './DarkModeToggle'
 import { useDarkMode } from '../contexts/DarkModeContext'
 import { MonetizationService } from '../services/monetizationService'
@@ -21,7 +22,6 @@ export default function AppContent({}: AppContentProps) {
   // Estados para monetización
   const [showRewardedVideoModal, setShowRewardedVideoModal] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
   // Actualizar MonetizationService cuando cambie el estado del usuario
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function AppContent({}: AppContentProps) {
           <div className="px-4 pb-4">
             <UsageBanner
               onShowRewardedVideo={() => setShowRewardedVideoModal(true)}
-              onShowPremium={() => setShowPremiumModal(true)}
+              onShowPremium={() => alert('Premium modal')}
               isRegistered={isRegistered}
             />
           </div>
