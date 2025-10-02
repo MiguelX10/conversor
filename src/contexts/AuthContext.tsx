@@ -299,8 +299,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     updateUserProfile,
     deleteAccount,
-    isRegistered: !!user,
-    isAnonymous: !user,
+    isRegistered: !!user && !user?.isAnonymous,
+    isAnonymous: !user || user?.isAnonymous === true,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
