@@ -1824,10 +1824,12 @@ function App() {
                 {/* Dropdown Menu */}
                 {isMobileMenuOpen && (
                   <div
-                    className="absolute top-full left-0 right-0 mt-2 rounded-lg shadow-lg border z-50"
+                    className="fixed left-4 right-4 mt-2 rounded-lg shadow-lg border z-50 max-h-[70vh] overflow-y-auto"
                     style={{
                       backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-                      borderColor: isDarkMode ? '#374151' : '#e5e7eb'
+                      borderColor: isDarkMode ? '#374151' : '#e5e7eb',
+                      top: '60px',
+                      boxSizing: 'border-box'
                     }}
                   >
                     {[
@@ -1850,7 +1852,7 @@ function App() {
                           setActiveSection(id as any)
                           setIsMobileMenuOpen(false)
                         }}
-                        className={`flex items-center space-x-3 w-full px-4 py-3 text-left text-sm transition-all duration-150 first:rounded-t-lg last:rounded-b-lg ${
+                        className={`flex items-center gap-3 w-full px-3 py-2.5 text-left text-sm transition-all duration-150 first:rounded-t-lg last:rounded-b-lg ${
                           activeSection === id
                             ? 'font-medium'
                             : 'hover:font-medium'
@@ -1861,7 +1863,8 @@ function App() {
                             : 'transparent',
                           color: activeSection === id
                             ? '#3b82f6'
-                            : (isDarkMode ? '#e5e7eb' : '#374151')
+                            : (isDarkMode ? '#e5e7eb' : '#374151'),
+                          boxSizing: 'border-box'
                         }}
                         onMouseEnter={(e) => {
                           if (activeSection !== id) {
@@ -1875,7 +1878,7 @@ function App() {
                         }}
                       >
                         <Icon className="h-4 w-4 flex-shrink-0" />
-                        <span>{label}</span>
+                        <span className="flex-1">{label}</span>
                       </button>
                     ))}
                   </div>
@@ -1920,10 +1923,11 @@ function App() {
 
                   {isMobileMenuOpen && (
                     <div
-                      className="absolute top-full left-0 mt-2 w-56 rounded-lg shadow-lg z-50 py-2"
+                      className="absolute top-full left-0 mt-2 w-56 rounded-lg shadow-lg z-50 py-2 max-h-[70vh] overflow-y-auto"
                       style={{
                         backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
+                        border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                        boxSizing: 'border-box'
                       }}
                     >
                       {[
@@ -1953,7 +1957,10 @@ function App() {
                               : 'transparent',
                             color: activeSection === id
                               ? '#3b82f6'
-                              : (isDarkMode ? '#e5e7eb' : '#374151')
+                              : (isDarkMode ? '#e5e7eb' : '#374151'),
+                            boxSizing: 'border-box',
+                            maxWidth: '100%',
+                            overflow: 'hidden'
                           }}
                           onMouseEnter={(e) => {
                             if (activeSection !== id) {
@@ -1967,7 +1974,7 @@ function App() {
                           }}
                         >
                           <Icon className="h-4 w-4 flex-shrink-0" />
-                          <span>{label}</span>
+                          <span className="truncate">{label}</span>
                         </button>
                       ))}
                     </div>
