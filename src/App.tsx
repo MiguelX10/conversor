@@ -787,6 +787,14 @@ const CONVERSION_TOOLS: ConversionTool[] = [
 function App() {
   const { isDarkMode, toggleDarkMode } = useDarkMode()
   const { user, isRegistered } = useAuth()
+
+  // Debug para producción - verificar estado de autenticación
+  console.log('Auth State:', {
+    hasUser: !!user,
+    isRegistered,
+    userProvider: user?.provider,
+    userEmail: user?.email
+  })
   const [selectedTool, setSelectedTool] = useState<ConversionTool>(CONVERSION_TOOLS[0])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [conversionState, setConversionState] = useState<ConversionState>({
@@ -1792,24 +1800,26 @@ function App() {
       {/* Navigation Bar - Fixed position */}
       <div className="fixed top-0 left-0 right-0 z-50 border-b transition-colors duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', backdropFilter: 'blur(8px)' }}>
         <div className="container mx-auto px-4 max-w-4xl">
-          <div className="flex items-center justify-between py-3">
-            {/* Navigation - Desktop/Mobile Adaptive */}
-            {isMobileView ? (
-              // Mobile Menu
-              <div className="relative" ref={mobileMenuRef}>
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                  style={{
-                    backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
-                    color: isDarkMode ? '#e5e7eb' : '#374151',
-                    border: `1px solid ${isDarkMode ? '#4b5563' : '#e2e8f0'}`
-                  }}
-                >
-                  <Menu className="h-4 w-4" />
-                  <span>{getActiveSectionLabel()}</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
+          <div className="flex items-center justify-between py-3 gap-2">
+            {/* Left side controls - Menu + Dark Mode Toggle */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Navigation - Desktop/Mobile Adaptive */}
+              {isMobileView ? (
+                // Mobile Menu
+                <div className="relative" ref={mobileMenuRef}>
+                  <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    style={{
+                      backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
+                      color: isDarkMode ? '#e5e7eb' : '#374151',
+                      border: `1px solid ${isDarkMode ? '#4b5563' : '#e2e8f0'}`
+                    }}
+                  >
+                    <Menu className="h-4 w-4" />
+                    <span className="hidden xs:inline">{getActiveSectionLabel()}</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
 
                 {/* Dropdown Menu */}
                 {isMobileMenuOpen && (
@@ -1872,137 +1882,146 @@ function App() {
                 )}
               </div>
             ) : (
-              // Desktop Navigation - Dropdown menu like mobile
-              <div className="relative">
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-sm"
-                  style={{
-                    backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
-                    color: isDarkMode ? '#e5e7eb' : '#374151'
-                  }}
-                >
-                  {(() => {
-                    const currentSection = [
-                      { id: 'all', label: 'Todas', icon: Grid },
-                      { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
-                      { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
-                      { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
-                      { id: 'optimize', label: 'Optimizar', icon: Settings },
-                      { id: 'image-convert', label: 'Imágenes', icon: Image },
-                      { id: 'media-convert', label: 'Audio/Video', icon: Film },
-                      { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
-                      { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
-                      { id: 'archive-convert', label: 'Archivos', icon: Archive },
-                      { id: 'data-convert', label: 'Datos', icon: Database },
-                      { id: 'design-convert', label: 'Diseño', icon: Layers }
-                    ].find(s => s.id === activeSection)
-                    const Icon = currentSection?.icon || Grid
-                    return (
-                      <>
-                        <Icon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{currentSection?.label || 'Todas'}</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </>
-                    )
-                  })()}
-                </button>
-
-                {isMobileMenuOpen && (
-                  <div
-                    className="absolute top-full left-0 mt-2 w-56 rounded-lg shadow-lg z-50 py-2"
+                // Desktop Navigation - Dropdown menu like mobile
+                <div className="relative">
+                  <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-sm"
                     style={{
-                      backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-                      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
+                      backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
+                      color: isDarkMode ? '#e5e7eb' : '#374151'
                     }}
                   >
-                    {[
-                      { id: 'all', label: 'Todas', icon: Grid },
-                      { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
-                      { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
-                      { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
-                      { id: 'optimize', label: 'Optimizar', icon: Settings },
-                      { id: 'image-convert', label: 'Imágenes', icon: Image },
-                      { id: 'media-convert', label: 'Audio/Video', icon: Film },
-                      { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
-                      { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
-                      { id: 'archive-convert', label: 'Archivos', icon: Archive },
-                      { id: 'data-convert', label: 'Datos', icon: Database },
-                      { id: 'design-convert', label: 'Diseño', icon: Layers }
-                    ].map(({ id, label, icon: Icon }) => (
-                      <button
-                        key={id}
-                        onClick={() => {
-                          setActiveSection(id as any)
-                          setIsMobileMenuOpen(false)
-                        }}
-                        className="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium transition-all duration-200"
-                        style={{
-                          backgroundColor: activeSection === id
-                            ? (isDarkMode ? '#3b82f620' : '#dbeafe')
-                            : 'transparent',
-                          color: activeSection === id
-                            ? '#3b82f6'
-                            : (isDarkMode ? '#e5e7eb' : '#374151')
-                        }}
-                        onMouseEnter={(e) => {
-                          if (activeSection !== id) {
-                            e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f8fafc'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (activeSection !== id) {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }
-                        }}
-                      >
-                        <Icon className="h-4 w-4 flex-shrink-0" />
-                        <span>{label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                    {(() => {
+                      const currentSection = [
+                        { id: 'all', label: 'Todas', icon: Grid },
+                        { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
+                        { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
+                        { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
+                        { id: 'optimize', label: 'Optimizar', icon: Settings },
+                        { id: 'image-convert', label: 'Imágenes', icon: Image },
+                        { id: 'media-convert', label: 'Audio/Video', icon: Film },
+                        { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
+                        { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
+                        { id: 'archive-convert', label: 'Archivos', icon: Archive },
+                        { id: 'data-convert', label: 'Datos', icon: Database },
+                        { id: 'design-convert', label: 'Diseño', icon: Layers }
+                      ].find(s => s.id === activeSection)
+                      const Icon = currentSection?.icon || Grid
+                      return (
+                        <>
+                          <Icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{currentSection?.label || 'Todas'}</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </>
+                      )
+                    })()}
+                  </button>
 
-            {/* Right side controls */}
-            <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
-              {/* Action buttons */}
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                {/* History button */}
-                <button
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
-                  style={{
-                    backgroundColor: showHistory ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
-                    color: showHistory ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
-                  }}
-                  title="Historial de conversiones"
-                >
-                  <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-
-                {/* Settings button */}
-                <button
-                  onClick={() => setShowSettings(!showSettings)}
-                  className="p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
-                  style={{
-                    backgroundColor: showSettings ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
-                    color: showSettings ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
-                  }}
-                  title="Configuración"
-                >
-                  <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-
-                {/* User Profile - Solo si está registrado */}
-                {isRegistered && <UserProfile />}
-
-                {/* Dark Mode Toggle - Smaller size */}
-                <div className="transform scale-[0.65] sm:scale-75">
-                  <DarkModeToggle isDark={isDarkMode} onToggle={toggleDarkMode} />
+                  {isMobileMenuOpen && (
+                    <div
+                      className="absolute top-full left-0 mt-2 w-56 rounded-lg shadow-lg z-50 py-2"
+                      style={{
+                        backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                        border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
+                      }}
+                    >
+                      {[
+                        { id: 'all', label: 'Todas', icon: Grid },
+                        { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
+                        { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
+                        { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
+                        { id: 'optimize', label: 'Optimizar', icon: Settings },
+                        { id: 'image-convert', label: 'Imágenes', icon: Image },
+                        { id: 'media-convert', label: 'Audio/Video', icon: Film },
+                        { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
+                        { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
+                        { id: 'archive-convert', label: 'Archivos', icon: Archive },
+                        { id: 'data-convert', label: 'Datos', icon: Database },
+                        { id: 'design-convert', label: 'Diseño', icon: Layers }
+                      ].map(({ id, label, icon: Icon }) => (
+                        <button
+                          key={id}
+                          onClick={() => {
+                            setActiveSection(id as any)
+                            setIsMobileMenuOpen(false)
+                          }}
+                          className="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium transition-all duration-200"
+                          style={{
+                            backgroundColor: activeSection === id
+                              ? (isDarkMode ? '#3b82f620' : '#dbeafe')
+                              : 'transparent',
+                            color: activeSection === id
+                              ? '#3b82f6'
+                              : (isDarkMode ? '#e5e7eb' : '#374151')
+                          }}
+                          onMouseEnter={(e) => {
+                            if (activeSection !== id) {
+                              e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f8fafc'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (activeSection !== id) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                        >
+                          <Icon className="h-4 w-4 flex-shrink-0" />
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {/* Dark Mode Toggle - Moved to left side */}
+              <div className="transform scale-[0.7] sm:scale-[0.8]">
+                <DarkModeToggle isDark={isDarkMode} onToggle={toggleDarkMode} />
               </div>
+            </div>
+
+            {/* Right side controls - History, Settings, User/Register */}
+            <div className="flex items-center gap-2">
+              {/* History button */}
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
+                style={{
+                  backgroundColor: showHistory ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
+                  color: showHistory ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
+                }}
+                title="Historial de conversiones"
+              >
+                <History className="h-4 w-4" />
+              </button>
+
+              {/* Settings button */}
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
+                style={{
+                  backgroundColor: showSettings ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
+                  color: showSettings ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
+                }}
+                title="Configuración"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+
+              {/* User Profile or Register Button */}
+              {isRegistered ? (
+                <UserProfile />
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors flex-shrink-0"
+                >
+                  <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden xs:inline">Registrarse</span>
+                  <span className="xs:hidden">Entrar</span>
+                </button>
+              )}
             </div>
 
             {/* Usage Banner */}
@@ -2207,10 +2226,10 @@ function App() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl pt-28 md:pt-36">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl pt-44 sm:pt-48 md:pt-52">
 
         {/* Hero Section */}
-        <section className="text-center mb-16 relative overflow-hidden">
+        <section className="text-center mb-8 sm:mb-12 md:mb-16 relative overflow-hidden">
           {/* Background elements */}
           <div className="absolute inset-0 -z-10">
             <div className={`absolute top-10 left-10 w-20 h-20 rounded-full blur-xl ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-400/30'}`}></div>
@@ -2218,22 +2237,22 @@ function App() {
             <div className={`absolute top-1/2 left-1/2 w-40 h-40 rounded-full blur-2xl ${isDarkMode ? 'bg-green-500/10' : 'bg-green-400/20'} -translate-x-1/2 -translate-y-1/2`}></div>
           </div>
 
-          <div className="mb-8 relative">
+          <div className="mb-6 sm:mb-8 relative">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="flex items-center justify-center mb-6"
+              className="flex items-center justify-center mb-4 sm:mb-6"
             >
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ duration: 0.8, type: "spring" }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl mr-4 shadow-lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 sm:p-3 rounded-lg sm:rounded-xl mr-3 sm:mr-4 shadow-lg"
               >
-                <Grid className="h-8 w-8 text-white" />
+                <Grid className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </motion.div>
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 bg-clip-text text-transparent">
                 ConvertPro
               </h1>
             </motion.div>
@@ -2242,7 +2261,7 @@ function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed mb-8"
+              className="text-base sm:text-lg md:text-xl lg:text-2xl max-w-3xl mx-auto leading-relaxed mb-6 sm:mb-8 px-2"
               style={{ color: 'var(--text-secondary)' }}
             >
               El conversor de archivos más completo.{' '}
@@ -2257,23 +2276,23 @@ function App() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto mb-8"
+              className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto mb-6 sm:mb-8 px-2"
             >
               <div className="text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">60+</div>
-                <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Formatos</div>
+                <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">60+</div>
+                <div className="text-xs sm:text-sm" style={{ color: 'var(--text-tertiary)' }}>Formatos</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">100%</div>
-                <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Gratis</div>
+                <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">100%</div>
+                <div className="text-xs sm:text-sm" style={{ color: 'var(--text-tertiary)' }}>Gratis</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">⚡</div>
-                <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Rápido</div>
+                <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">⚡</div>
+                <div className="text-xs sm:text-sm" style={{ color: 'var(--text-tertiary)' }}>Rápido</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">🔒</div>
-                <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Seguro</div>
+                <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">🔒</div>
+                <div className="text-xs sm:text-sm" style={{ color: 'var(--text-tertiary)' }}>Seguro</div>
               </div>
             </motion.div>
 
@@ -2282,7 +2301,7 @@ function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
-              className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto"
+              className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-3xl mx-auto px-2"
             >
               {['PDF ↔ Word', 'Video → MP3', 'HEIC → JPG', 'EPUB → PDF', 'Merge PDFs', 'Split PDFs'].map((feature, index) => (
                 <motion.span
@@ -2291,7 +2310,7 @@ function App() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
                   whileHover={{ scale: 1.05 }}
-                  className="px-4 py-2 rounded-full text-sm font-medium"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium"
                   style={{
                     backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
                     color: 'rgb(59, 130, 246)',
@@ -2306,15 +2325,15 @@ function App() {
         </section>
 
         {/* Tool Selector */}
-        <div className="mb-10">
-          <div className="rounded-2xl border p-8 transition-all duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}>
-            <div className="flex items-center justify-center mb-8">
+        <div className="mb-8 sm:mb-10">
+          <div className="rounded-xl sm:rounded-2xl border p-4 sm:p-6 md:p-8 transition-all duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="flex items-center justify-center mb-6 sm:mb-8">
               {(() => {
                 const SectionIcon = getSectionIcon(activeSection)
                 return (
                   <>
-                    <SectionIcon className="h-6 w-6 mr-3" style={{ color: 'var(--text-primary)' }} />
-                    <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                    <SectionIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3" style={{ color: 'var(--text-primary)' }} />
+                    <h2 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                       {getSectionTitle(activeSection)}
                     </h2>
                   </>
@@ -2323,7 +2342,7 @@ function App() {
             </div>
 
             {/* Tools Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {getFilteredTools(activeSection).map((tool, index) => {
                 const IconComponent = tool.icon
                 const isSelected = selectedTool.id === tool.id
@@ -2407,7 +2426,7 @@ function App() {
                   <motion.button
                     key={tool.id}
                     onClick={() => selectTool(tool)}
-                    className={`p-4 rounded-lg border-2 text-left ${
+                    className={`p-3 sm:p-4 rounded-lg border-2 text-left min-h-[60px] sm:min-h-[70px] ${
                       isSelected
                         ? 'shadow-lg'
                         : 'border-transparent hover:border-gray-300 hover:shadow-md'
@@ -2443,7 +2462,7 @@ function App() {
                   >
                     {tool.category === 'optimize' || tool.category === 'image-convert' || tool.category === 'pdf-tools' || tool.category === 'media-convert' || tool.category === 'document-convert' || tool.category === 'ebook-convert' || tool.category === 'archive-convert' || tool.category === 'data-convert' || tool.category === 'design-convert' ? (
                       <motion.div
-                        className="flex items-center mb-2"
+                        className="flex items-center mb-1.5 sm:mb-2"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: 0.2 }}
@@ -2453,7 +2472,7 @@ function App() {
                           animate={{ rotate: 0, scale: 1 }}
                           transition={{ duration: 0.5, delay: 0.3 }}
                         >
-                          <IconComponent className="h-5 w-5 mr-2" style={{ color: colors.icon }} />
+                          <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 mr-2" style={{ color: colors.icon }} />
                         </motion.div>
                         <motion.div
                           className="flex items-center space-x-2"
@@ -2462,7 +2481,7 @@ function App() {
                           transition={{ duration: 0.3, delay: 0.4 }}
                         >
                           <span
-                            className="font-medium"
+                            className="font-medium text-sm sm:text-base"
                             style={{ color: 'var(--text-primary)' }}
                           >
                             {tool.name}
@@ -2485,7 +2504,7 @@ function App() {
                           {/* Source Icon */}
                           {tool.inputFormat === 'pdf' ? (
                             <motion.svg
-                              className="h-5 w-5 mr-2"
+                              className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2"
                               style={{ fill: colors.icon }}
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
@@ -2503,7 +2522,7 @@ function App() {
                             </motion.svg>
                           ) : tool.inputFormat === 'docx' ? (
                             <motion.svg
-                              className="h-5 w-5 mr-2"
+                              className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2"
                               style={{ fill: colors.icon }}
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
@@ -2521,7 +2540,7 @@ function App() {
                             </motion.svg>
                           ) : tool.inputFormat === 'xlsx' ? (
                             <motion.svg
-                              className="h-5 w-5 mr-2"
+                              className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2"
                               style={{ fill: colors.icon }}
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
@@ -2539,7 +2558,7 @@ function App() {
                             </motion.svg>
                           ) : tool.inputFormat === 'pptx' ? (
                             <motion.svg
-                              className="h-5 w-5 mr-2"
+                              className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2"
                               style={{ fill: colors.icon }}
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
@@ -2557,7 +2576,7 @@ function App() {
                             </motion.svg>
                           ) : tool.inputFormat === 'html' ? (
                             <motion.svg
-                              className="h-5 w-5 mr-2"
+                              className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2"
                               style={{ fill: colors.icon }}
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
@@ -2575,7 +2594,7 @@ function App() {
                             </motion.svg>
                           ) : (tool.inputFormat === 'jpg' || tool.inputFormat === 'image') ? (
                             <motion.svg
-                              className="h-5 w-5 mr-2"
+                              className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2"
                               style={{ fill: colors.icon }}
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
@@ -2592,7 +2611,7 @@ function App() {
                               />
                             </motion.svg>
                           ) : (
-                            <IconComponent className="h-5 w-5 mr-2" style={{ color: colors.icon }} />
+                            <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" style={{ color: colors.icon }} />
                           )}
                           <motion.div
                             className="flex items-center space-x-2"
@@ -2601,7 +2620,7 @@ function App() {
                             transition={{ duration: 0.3, delay: 0.5 }}
                           >
                             <span
-                              className="font-medium"
+                              className="font-medium text-sm sm:text-base"
                               style={{ color: 'var(--text-primary)' }}
                             >
                               {tool.name}
@@ -2756,7 +2775,7 @@ function App() {
                       </motion.div>
                     )}
                     <motion.p
-                      className="text-sm"
+                      className="text-xs sm:text-sm"
                       style={{ color: 'var(--text-secondary)' }}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -2772,13 +2791,13 @@ function App() {
         </div>
 
         {/* Main Converter */}
-        <div id="conversion-section" className="rounded-2xl border overflow-hidden mb-12 transition-all duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', boxShadow: 'var(--shadow-xl)' }}>
-          <div className="p-8">
+        <div id="conversion-section" className="rounded-xl sm:rounded-2xl border overflow-hidden mb-8 sm:mb-12 transition-all duration-300" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)', boxShadow: 'var(--shadow-xl)' }}>
+          <div className="p-4 sm:p-6 md:p-8">
 
             {/* File Upload */}
             <div
               {...getRootProps()}
-              className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${
+              className={`border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-8 md:p-12 text-center cursor-pointer transition-all min-h-[120px] flex flex-col items-center justify-center ${
                 isDragActive
                   ? 'border-blue-400'
                   : selectedFile
@@ -2796,7 +2815,7 @@ function App() {
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.5, type: "spring", bounce: 0.3 }}
               >
-                <Upload className="mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} size={48} />
+                <Upload className="mx-auto mb-3 sm:mb-4" style={{ color: 'var(--text-tertiary)' }} size={36} />
               </motion.div>
 
               {/* Mostrar archivos múltiples para merge */}
@@ -2806,12 +2825,12 @@ function App() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4, type: "spring" }}
                 >
-                  <p className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  <p className="text-base sm:text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                     {multipleFiles.length} archivos seleccionados para merge
                   </p>
                   <div className="space-y-1">
                     {multipleFiles.map((file, index) => (
-                      <p key={index} className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <p key={index} className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {file.name}
                       </p>
                     ))}
@@ -2837,10 +2856,10 @@ function App() {
                       animate={{ rotate: 0, scale: 1 }}
                       transition={{ duration: 0.5, delay: 0.2 }}
                     >
-                      <selectedTool.icon className="h-6 w-6 mr-2 text-green-600" />
+                      <selectedTool.icon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-green-600" />
                     </motion.div>
                     <motion.p
-                      className="text-green-600 font-medium"
+                      className="text-green-600 font-medium text-sm sm:text-base"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 }}
@@ -2849,6 +2868,7 @@ function App() {
                     </motion.p>
                   </motion.div>
                   <motion.p
+                    className="text-sm sm:text-base"
                     style={{ color: 'var(--text-primary)' }}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -2857,7 +2877,7 @@ function App() {
                     {selectedFile.name}
                   </motion.p>
                   <motion.p
-                    className="text-sm"
+                    className="text-xs sm:text-sm"
                     style={{ color: 'var(--text-secondary)' }}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -3361,12 +3381,12 @@ function App() {
 
             {/* Convert Button */}
             {((selectedFile && !selectedTool.isMultiFile) || (multipleFiles.length > 0 && selectedTool.isMultiFile)) && conversionState.status === 'idle' && (
-              <div className="flex justify-center mt-8 space-x-4">
+              <div className="flex justify-center mt-6 sm:mt-8 space-x-3 sm:space-x-4">
                 <button
                   onClick={convertFile}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-2 sm:space-x-3 min-h-[44px] text-sm sm:text-base"
                 >
-                  <selectedTool.icon className="h-5 w-5" />
+                  <selectedTool.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>
                     {selectedTool.isMultiFile && selectedTool.id === 'jpg-to-pdf' ? 'Crear PDF con Imágenes' :
                      selectedTool.isMultiFile ? 'Combinar PDFs' :
