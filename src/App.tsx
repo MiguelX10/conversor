@@ -2015,7 +2015,6 @@ function App() {
                 }}
                 onShowLogin={() => setShowLoginModal(true)}
                 isRegistered={isRegistered}
-                isAnonymous={isAnonymous}
                 userUid={user?.uid}
               />
             </div>

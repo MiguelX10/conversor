@@ -7,11 +7,10 @@ interface UsageBannerProps {
   onShowPremium: () => void;
   onShowLogin: () => void;
   isRegistered: boolean;
-  isAnonymous?: boolean;
   userUid?: string;
 }
 
-export default function UsageBanner({ onShowRewardedVideo, onShowPremium, onShowLogin, isRegistered, isAnonymous = false, userUid }: UsageBannerProps) {
+export default function UsageBanner({ onShowRewardedVideo, onShowPremium, onShowLogin, isRegistered, userUid }: UsageBannerProps) {
   const state = MonetizationService.getMonetizationState(isRegistered, userUid);
   const usageText = MonetizationService.getUsageText(isRegistered, userUid);
 
