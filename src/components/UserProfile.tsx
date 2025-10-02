@@ -54,27 +54,27 @@ export default function UserProfile() {
     <div className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="relative group">
           {user.photoURL ? (
             <img
               src={user.photoURL}
               alt={user.displayName}
-              className="w-8 h-8 rounded-full object-cover"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
             />
           ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-semibold text-xs sm:text-sm">
                 {getInitials(user.displayName || 'U')}
               </span>
             </div>
           )}
           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <Camera className="w-4 h-4 text-white" />
+            <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
           </div>
         </div>
-        <div className="hidden md:block text-left">
+        <div className="hidden lg:block text-left">
           <p className="text-sm font-medium text-gray-900 dark:text-white">
             {user.displayName}
           </p>

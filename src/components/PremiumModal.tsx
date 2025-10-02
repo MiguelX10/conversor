@@ -14,14 +14,14 @@ export default function PremiumModal({ isOpen, onClose, trigger }: PremiumModalP
 
   const plans = {
     monthly: {
-      price: '$7.99',
+      price: '$60 MXN',
       period: 'mes',
       savings: null
     },
     yearly: {
-      price: '$79.99',
+      price: '$600 MXN',
       period: 'año',
-      savings: 'Ahorra $16 (17%)'
+      savings: 'Ahorra $120 (17%)'
     }
   };
 

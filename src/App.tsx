@@ -1031,12 +1031,20 @@ function App() {
     // Verificar límites de conversión antes de proceder
     if (!MonetizationService.canConvert(isRegistered, user?.uid)) {
       const state = MonetizationService.getMonetizationState(isRegistered, user?.uid)
-      console.log('convertFile - cannot convert, state:', state);
+
+      // Detectar si estamos en móvil
+      const isMobile = window.innerWidth < 768;
+
       if (state.canWatchAd) {
         setShowRewardedVideoModal(true)
         return
       } else {
-        // Sin más opciones por hoy - el banner se mostrará automáticamente
+        // Si estamos en móvil y no hay anuncios disponibles, mostrar Premium
+        if (isMobile) {
+          setPremiumModalTrigger('conversions_exhausted')
+          setShowPremiumModal(true)
+        }
+        // En desktop/tablet, el banner se mostrará automáticamente con ambos botones
         return
       }
     }
@@ -1864,73 +1872,127 @@ function App() {
                 )}
               </div>
             ) : (
-              // Desktop Navigation Tabs
-              <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide">
-                {[
-                  { id: 'all', label: 'Todas', icon: Grid },
-                  { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
-                  { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
-                  { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
-                  { id: 'optimize', label: 'Optimizar', icon: Settings },
-                  { id: 'image-convert', label: 'Imágenes', icon: Image },
-                  { id: 'media-convert', label: 'Audio/Video', icon: Film },
-                  { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
-                  { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
-                  { id: 'archive-convert', label: 'Archivos', icon: Archive },
-                  { id: 'data-convert', label: 'Datos', icon: Database },
-                  { id: 'design-convert', label: 'Diseño', icon: Layers }
-                ].map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setActiveSection(id as any)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      activeSection === id
-                        ? 'shadow-md transform scale-105'
-                        : 'hover:shadow-sm hover:scale-102'
-                    }`}
+              // Desktop Navigation - Dropdown menu like mobile
+              <div className="relative">
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-sm"
+                  style={{
+                    backgroundColor: isDarkMode ? '#374151' : '#f8fafc',
+                    color: isDarkMode ? '#e5e7eb' : '#374151'
+                  }}
+                >
+                  {(() => {
+                    const currentSection = [
+                      { id: 'all', label: 'Todas', icon: Grid },
+                      { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
+                      { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
+                      { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
+                      { id: 'optimize', label: 'Optimizar', icon: Settings },
+                      { id: 'image-convert', label: 'Imágenes', icon: Image },
+                      { id: 'media-convert', label: 'Audio/Video', icon: Film },
+                      { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
+                      { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
+                      { id: 'archive-convert', label: 'Archivos', icon: Archive },
+                      { id: 'data-convert', label: 'Datos', icon: Database },
+                      { id: 'design-convert', label: 'Diseño', icon: Layers }
+                    ].find(s => s.id === activeSection)
+                    const Icon = currentSection?.icon || Grid
+                    return (
+                      <>
+                        <Icon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{currentSection?.label || 'Todas'}</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </>
+                    )
+                  })()}
+                </button>
+
+                {isMobileMenuOpen && (
+                  <div
+                    className="absolute top-full left-0 mt-2 w-56 rounded-lg shadow-lg z-50 py-2"
                     style={{
-                      backgroundColor: activeSection === id
-                        ? (isDarkMode ? '#3b82f620' : '#dbeafe')
-                        : 'transparent',
-                      color: activeSection === id ? '#3b82f6' : 'var(--text-secondary)',
-                      borderColor: activeSection === id ? '#3b82f6' : 'transparent'
+                      backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                      border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`
                     }}
                   >
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
-                  </button>
-                ))}
+                    {[
+                      { id: 'all', label: 'Todas', icon: Grid },
+                      { id: 'from-pdf', label: 'Desde PDF', icon: FileText },
+                      { id: 'to-pdf', label: 'Hacia PDF', icon: FileText },
+                      { id: 'pdf-tools', label: 'PDF Tools', icon: Combine },
+                      { id: 'optimize', label: 'Optimizar', icon: Settings },
+                      { id: 'image-convert', label: 'Imágenes', icon: Image },
+                      { id: 'media-convert', label: 'Audio/Video', icon: Film },
+                      { id: 'document-convert', label: 'Documentos', icon: FileSpreadsheet },
+                      { id: 'ebook-convert', label: 'eBooks', icon: BookOpen },
+                      { id: 'archive-convert', label: 'Archivos', icon: Archive },
+                      { id: 'data-convert', label: 'Datos', icon: Database },
+                      { id: 'design-convert', label: 'Diseño', icon: Layers }
+                    ].map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => {
+                          setActiveSection(id as any)
+                          setIsMobileMenuOpen(false)
+                        }}
+                        className="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium transition-all duration-200"
+                        style={{
+                          backgroundColor: activeSection === id
+                            ? (isDarkMode ? '#3b82f620' : '#dbeafe')
+                            : 'transparent',
+                          color: activeSection === id
+                            ? '#3b82f6'
+                            : (isDarkMode ? '#e5e7eb' : '#374151')
+                        }}
+                        onMouseEnter={(e) => {
+                          if (activeSection !== id) {
+                            e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f8fafc'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (activeSection !== id) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Right side controls */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
               {/* Action buttons */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 {/* History button */}
                 <button
                   onClick={() => setShowHistory(!showHistory)}
-                  className="p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
+                  className="p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
                   style={{
                     backgroundColor: showHistory ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
                     color: showHistory ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
                   }}
                   title="Historial de conversiones"
                 >
-                  <History className="h-4 w-4" />
+                  <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
 
                 {/* Settings button */}
                 <button
                   onClick={() => setShowSettings(!showSettings)}
-                  className="p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
+                  className="p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-sm"
                   style={{
                     backgroundColor: showSettings ? (isDarkMode ? '#3b82f620' : '#dbeafe') : 'transparent',
                     color: showSettings ? '#3b82f6' : (isDarkMode ? '#e5e7eb' : '#6b7280')
                   }}
                   title="Configuración"
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
 
                 {/* User Profile / Login Button */}
@@ -1939,22 +2001,23 @@ function App() {
                 ) : (
                   <button
                     onClick={() => setShowLoginModal(true)}
-                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors"
                   >
-                    <Upload className="w-4 h-4" />
-                    Registrarse
+                    <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Registrarse</span>
+                    <span className="sm:hidden">Entrar</span>
                   </button>
                 )}
 
                 {/* Dark Mode Toggle - Smaller size */}
-                <div className="transform scale-75">
+                <div className="transform scale-[0.65] sm:scale-75">
                   <DarkModeToggle isDark={isDarkMode} onToggle={toggleDarkMode} />
                 </div>
               </div>
             </div>
 
             {/* Usage Banner */}
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-4 flex justify-center">
               <UsageBanner
                 onShowRewardedVideo={() => setShowRewardedVideoModal(true)}
                 onShowPremium={() => {
