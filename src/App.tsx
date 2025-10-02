@@ -2208,7 +2208,7 @@ function App() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl pt-40">
+      <div className="container mx-auto px-4 py-8 max-w-4xl pt-28 md:pt-36">
 
         {/* Hero Section */}
         <section className="text-center mb-16 relative overflow-hidden">
