@@ -1995,19 +1995,8 @@ function App() {
                   <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
 
-                {/* User Profile / Login Button */}
-                {isRegistered ? (
-                  <UserProfile />
-                ) : (
-                  <button
-                    onClick={() => setShowLoginModal(true)}
-                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors"
-                  >
-                    <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">Registrarse</span>
-                    <span className="sm:hidden">Entrar</span>
-                  </button>
-                )}
+                {/* User Profile - Solo si está registrado */}
+                {isRegistered && <UserProfile />}
 
                 {/* Dark Mode Toggle - Smaller size */}
                 <div className="transform scale-[0.65] sm:scale-75">
@@ -2024,6 +2013,7 @@ function App() {
                   setPremiumModalTrigger('manual')
                   setShowPremiumModal(true)
                 }}
+                onShowLogin={() => setShowLoginModal(true)}
                 isRegistered={isRegistered}
                 userUid={user?.uid}
               />
@@ -2217,7 +2207,7 @@ function App() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl" style={{ paddingTop: 'clamp(6rem, 8rem, 10rem)' }}>
+      <div className="container mx-auto px-4 py-8 max-w-4xl pt-40">
 
         {/* Hero Section */}
         <section className="text-center mb-16 relative overflow-hidden">

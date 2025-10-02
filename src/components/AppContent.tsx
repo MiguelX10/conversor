@@ -91,6 +91,7 @@ export default function AppContent({}: AppContentProps) {
             <UsageBanner
               onShowRewardedVideo={() => setShowRewardedVideoModal(true)}
               onShowPremium={() => alert('Premium modal')}
+              onShowLogin={() => setShowLoginModal(true)}
               isRegistered={isRegistered}
             />
           </div>

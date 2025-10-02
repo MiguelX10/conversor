@@ -1,20 +1,46 @@
-import { Gift, AlertCircle, Crown } from 'lucide-react';
+import { Gift, AlertCircle, Crown, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { MonetizationService } from '../services/monetizationService';
 
 interface UsageBannerProps {
   onShowRewardedVideo: () => void;
   onShowPremium: () => void;
+  onShowLogin: () => void;
   isRegistered: boolean;
   userUid?: string;
 }
 
-export default function UsageBanner({ onShowRewardedVideo, onShowPremium, isRegistered, userUid }: UsageBannerProps) {
+export default function UsageBanner({ onShowRewardedVideo, onShowPremium, onShowLogin, isRegistered, userUid }: UsageBannerProps) {
   const state = MonetizationService.getMonetizationState(isRegistered, userUid);
   const usageText = MonetizationService.getUsageText(isRegistered, userUid);
 
+  // Usuario anónimo - mostrar mensaje para registrarse cuando se agote la conversión
+  if (!isRegistered && state.remainingConversions === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-2 border-blue-300 dark:border-blue-600 px-4 py-3 rounded-xl shadow-sm w-fit"
+      >
+        <div className="flex items-center gap-3 flex-wrap justify-center">
+          <div className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <span className="text-blue-900 dark:text-blue-100 font-semibold text-sm sm:text-base">
+              ¡Regístrate gratis y obtén 3 conversiones diarias!
+            </span>
+          </div>
+          <button
+            onClick={onShowLogin}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md hover:shadow-lg whitespace-nowrap"
+          >
+            Registrarse Gratis
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
 
-
+  // Usuarios registrados
   if (state.remainingConversions === 0) {
     // No conversions left
     if (state.canWatchAd) {
