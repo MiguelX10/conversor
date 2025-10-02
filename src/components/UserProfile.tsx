@@ -1,5 +1,5 @@
-import { useState, useRef, ChangeEvent } from 'react';
-import { User, LogOut, Settings, Crown, Camera, Upload, Trash2 } from 'lucide-react';
+import { useState, useRef, type ChangeEvent } from 'react';
+import { LogOut, Settings, Crown, Camera, Upload, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import DeleteAccountModal from './DeleteAccountModal';
