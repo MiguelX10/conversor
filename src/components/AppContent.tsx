@@ -93,6 +93,7 @@ export default function AppContent({}: AppContentProps) {
               onShowPremium={() => alert('Premium modal')}
               onShowLogin={() => setShowLoginModal(true)}
               isRegistered={isRegistered}
+              isAnonymous={isAnonymous}
             />
           </div>
         </div>

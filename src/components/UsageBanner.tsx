@@ -7,15 +7,16 @@ interface UsageBannerProps {
   onShowPremium: () => void;
   onShowLogin: () => void;
   isRegistered: boolean;
+  isAnonymous?: boolean;
   userUid?: string;
 }
 
-export default function UsageBanner({ onShowRewardedVideo, onShowPremium, onShowLogin, isRegistered, userUid }: UsageBannerProps) {
+export default function UsageBanner({ onShowRewardedVideo, onShowPremium, onShowLogin, isRegistered, isAnonymous = false, userUid }: UsageBannerProps) {
   const state = MonetizationService.getMonetizationState(isRegistered, userUid);
   const usageText = MonetizationService.getUsageText(isRegistered, userUid);
 
   // Usuario anónimo - solo mostrar mensaje para registrarse cuando se agote la conversión
-  if (!isRegistered) {
+  if (isAnonymous || !isRegistered) {
     if (state.remainingConversions === 0) {
       return (
         <motion.div

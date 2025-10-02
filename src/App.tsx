@@ -786,7 +786,7 @@ const CONVERSION_TOOLS: ConversionTool[] = [
 
 function App() {
   const { isDarkMode, toggleDarkMode } = useDarkMode()
-  const { user, isRegistered } = useAuth()
+  const { user, isRegistered, isAnonymous } = useAuth()
   const [selectedTool, setSelectedTool] = useState<ConversionTool>(CONVERSION_TOOLS[0])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [conversionState, setConversionState] = useState<ConversionState>({
@@ -2015,6 +2015,7 @@ function App() {
                 }}
                 onShowLogin={() => setShowLoginModal(true)}
                 isRegistered={isRegistered}
+                isAnonymous={isAnonymous}
                 userUid={user?.uid}
               />
             </div>
