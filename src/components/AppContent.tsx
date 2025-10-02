@@ -1,13 +1,8 @@
 // Contenido principal de la app - extraído para usar hooks de auth
-import { useState, useEffect, useRef } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { FileText, Upload, Download, Loader2, AlertCircle, CheckCircle, Image, FileSpreadsheet, Presentation, Globe, Grid, Minimize2, Video, Settings, Combine, SplitSquareHorizontal, Music, Film, Archive, FileImage, FileType, Palette, FileAudio, Headphones, Volume2, Camera, Zap, Code, BookOpen, FileCode, Layers, Lock, Database, HardDrive, Smartphone, Menu, ChevronDown, History, Eye, Trash2, Star, FolderOpen, X } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { saveAs } from 'file-saver'
+import { useState, useEffect } from 'react'
+import { Upload } from 'lucide-react'
 import DarkModeToggle from './DarkModeToggle'
-import LoadingAnimation from './LoadingAnimation'
 import { useDarkMode } from '../contexts/DarkModeContext'
-import { trackConversionStarted, trackConversionCompleted, trackConversionError, trackToolSelection, trackFileUploaded } from '../utils/analytics'
 import { MonetizationService } from '../services/monetizationService'
 import RewardedVideoModal from './RewardedVideoModal'
 import UsageBanner from './UsageBanner'
@@ -21,11 +16,12 @@ interface AppContentProps {
 
 export default function AppContent({}: AppContentProps) {
   const { isDarkMode, toggleDarkMode } = useDarkMode()
-  const { user, isRegistered, isAnonymous } = useAuth()
+  const { isRegistered, isAnonymous } = useAuth()
 
   // Estados para monetización
   const [showRewardedVideoModal, setShowRewardedVideoModal] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
   // Actualizar MonetizationService cuando cambie el estado del usuario
   useEffect(() => {
@@ -94,6 +90,7 @@ export default function AppContent({}: AppContentProps) {
           <div className="px-4 pb-4">
             <UsageBanner
               onShowRewardedVideo={() => setShowRewardedVideoModal(true)}
+              onShowPremium={() => setShowPremiumModal(true)}
               isRegistered={isRegistered}
             />
           </div>
